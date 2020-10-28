@@ -10,13 +10,15 @@ import websocket
 
 logging.basicConfig()
 
+MONGODB_HOST = "localhost"
+
 
 class BitmexStream:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
 
-        self.db = MongoClient("mongodb://localhost:27017")["bitmex"]
+        self.db = MongoClient(f"mongodb://{MONGODB_HOST}:27017")["bitmex"]
 
     def connect(self):
         """Connect to the websocket in a thread."""
