@@ -20,6 +20,8 @@ class BitmexStream:
 
         self.db = MongoClient(f"mongodb://{MONGODB_HOST}:27017")["bitmex"]
 
+        self.exited = False
+
     def connect(self):
         """Connect to the websocket in a thread."""
         self.logger.debug("Starting thread")
@@ -91,7 +93,7 @@ class BitmexStream:
 
     def exit(self):
         """Call this to exit - will close websocket."""
-        # self.exited = True
+        self.exited = True
         self.ws.close()
 
 
