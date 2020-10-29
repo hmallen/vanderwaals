@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import threading
@@ -61,12 +62,22 @@ class BitmexStream:
         """Handler for parsing WS messages."""
         message = json.loads(message)
         # self.logger.debug(json.dumps(message))
-
         pprint(message)
 
         try:
-            if "data" in message:  # and message["data"]:
-                insert_result = self.db[message["data"][0]["symbol"]].insert_many(
+            if "data" in message and message["data"]:  # and message["data"]:
+                if message['table'] == 'chat':
+                    dt_name = 'date'
+                else:
+                    dt_name = 'timestamp'
+
+                for idx, single_trade in enumerate(message['data']):
+                    message['data'][idx][dt_name] = datetime.datetime.fromisoformat(single_trade[dt_name].rstrip('Z')) 
+
+                #insert_result = self.db[message["data"][0]["symbol"]].insert_many(
+                #    message["data"]
+                #)
+                insert_result = self.db[message["table"]].insert_many(
                     message["data"]
                 )
                 self.logger.debug(f"Trade Count: {len(insert_result.inserted_ids)}")
@@ -102,7 +113,13 @@ if __name__ == "__main__":
     bitmex_stream.connect()
 
     print("Pre-sub")
-    bitmex_stream.send_command(command="subscribe", args=["trade:XBTUSD"])
+    bitmex_stream.send_command(command="subscribe", args=[
+        "trade:XBTUSD",
+        "instrument:XBTUSD",
+        "trade:ETHUSD",
+        "instrument:ETHUSD",
+        "chat"
+    ])
 
     while True:
         try:
