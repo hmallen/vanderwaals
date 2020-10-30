@@ -36,7 +36,7 @@ class BitmexStream:
         )
 
         formatter = logging.Formatter(
-            fmt="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+            fmt="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S%p|"
         )
 
         stream_handler.setFormatter(formatter)
@@ -96,13 +96,15 @@ class BitmexStream:
         """Handler for parsing WS messages."""
         message = json.loads(message)
 
+        # pprint(message)
+
+        if message["table"] == "chat":
+            dt_name = "date"
+        else:
+            dt_name = "timestamp"
+
         try:
             if "data" in message and message["data"]:  # and message["data"]:
-                if message["table"] == "chat":
-                    dt_name = "date"
-                else:
-                    dt_name = "timestamp"
-
                 for idx, single_trade in enumerate(message["data"]):
                     message["data"][idx][dt_name] = datetime.datetime.fromisoformat(
                         single_trade[dt_name].rstrip("Z")
@@ -112,9 +114,19 @@ class BitmexStream:
                 #    message["data"]
                 # )
                 insert_result = self.db[message["table"]].insert_many(message["data"])
-                self.logger.debug(
-                    f"Trade Count: {len(insert_result.inserted_ids)}, {message['data'][0]['symbol']} => {message['data'][0]['size']} @ {message['data'][0]['price']}"
-                )
+
+                if message["table"] == "trade":
+                    self.logger.debug(
+                        f"Trade Count: {len(insert_result.inserted_ids)}, {message['data'][0]['symbol']} => {message['data'][0]['size']} @ {message['data'][0]['price']}"
+                    )
+                elif message["table"] == "instrument":
+                    self.logger.debug(
+                        f"Table: {message['table']}, {message['data'][0]['symbol']}"
+                    )
+                elif message["table"] == "chat":
+                    self.logger.debug(
+                        f"Chat Message: {message['data'][0]['user']} => {message['data'][0]['message']}"
+                    )
 
             else:
                 if dt_name in message:
