@@ -1,25 +1,53 @@
 import datetime
 import json
 import logging
+import logging.handlers
+import os
 import threading
 import traceback
 import time
 
-from pprint import pprint
+# from pprint import pprint
 from pymongo import MongoClient
 import websocket
 
-logging.basicConfig()
-
-MONGODB_HOST = "localhost"
+# logging.basicConfig()
 
 
 class BitmexStream:
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+    def __init__(
+        self,
+        mongo_host="localhost",
+        mongo_port=27017,
+        mongo_db="bitmex",
+        logger="bitmex_stream",
+    ):
+        log_file = f"{logger}.log"
+
+        self.logger = logging.getLogger(logger)
         self.logger.setLevel(logging.DEBUG)
 
-        self.db = MongoClient(f"mongodb://{MONGODB_HOST}:27017")["bitmex"]
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        # file_handler = logging.FileHandler()
+        # file_handler.setLevel(logging.DEBUG)
+        rotating_handler = logging.handlers.RotatingFileHandler(
+            log_file, maxBytes=1e7, backupCount=10
+        )
+
+        formatter = logging.Formatter(
+            fmt="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+        )
+
+        stream_handler.setFormatter(formatter)
+        # file_handler.setFormatter(formatter)
+        rotating_handler.setFormatter(formatter)
+
+        self.logger.addHandler(stream_handler)
+        # self.logger.addHandler(file_handler)
+        self.logger.addHandler(rotating_handler)
+
+        self.db = MongoClient(f"mongodb://{mongo_host}:{mongo_port}")[mongo_db]
 
         self.exited = False
 
@@ -52,6 +80,12 @@ class BitmexStream:
                 "Couldn't connect to websocket! Exiting."
             )
 
+    def subscribe(self, channels):
+        self.send_command(command="subscribe", args=channels)
+
+    def unsubscribe(self, channels):
+        self.send_command(command="unsubscribe", args=channels)
+
     def send_command(self, command, args=None):
         """Send a raw command."""
         if args is None:
@@ -61,27 +95,32 @@ class BitmexStream:
     def on_message(self, message):
         """Handler for parsing WS messages."""
         message = json.loads(message)
-        # self.logger.debug(json.dumps(message))
-        pprint(message)
 
         try:
             if "data" in message and message["data"]:  # and message["data"]:
-                if message['table'] == 'chat':
-                    dt_name = 'date'
+                if message["table"] == "chat":
+                    dt_name = "date"
                 else:
-                    dt_name = 'timestamp'
+                    dt_name = "timestamp"
 
-                for idx, single_trade in enumerate(message['data']):
-                    message['data'][idx][dt_name] = datetime.datetime.fromisoformat(single_trade[dt_name].rstrip('Z')) 
+                for idx, single_trade in enumerate(message["data"]):
+                    message["data"][idx][dt_name] = datetime.datetime.fromisoformat(
+                        single_trade[dt_name].rstrip("Z")
+                    )
 
-                #insert_result = self.db[message["data"][0]["symbol"]].insert_many(
+                # insert_result = self.db[message["data"][0]["symbol"]].insert_many(
                 #    message["data"]
-                #)
-                insert_result = self.db[message["table"]].insert_many(
-                    message["data"]
+                # )
+                insert_result = self.db[message["table"]].insert_many(message["data"])
+                self.logger.debug(
+                    f"Trade Count: {len(insert_result.inserted_ids)}, {message['data'][0]['symbol']} => {message['data'][0]['size']} @ {message['data'][0]['price']}"
                 )
-                self.logger.debug(f"Trade Count: {len(insert_result.inserted_ids)}")
+
             else:
+                if dt_name in message:
+                    message[dt_name] = datetime.datetime.fromisoformat(
+                        message[dt_name].rstrip("Z")
+                    )
                 insert_result = self.db["status"].insert_one(message)
                 self.logger.debug(f"Status ID: {insert_result.inserted_id}")
 
@@ -104,22 +143,24 @@ class BitmexStream:
 
     def exit(self):
         """Call this to exit - will close websocket."""
-        self.exited = True
         self.ws.close()
+        self.exited = True
 
 
 if __name__ == "__main__":
     bitmex_stream = BitmexStream()
+
     bitmex_stream.connect()
 
-    print("Pre-sub")
-    bitmex_stream.send_command(command="subscribe", args=[
-        "trade:XBTUSD",
-        "instrument:XBTUSD",
-        "trade:ETHUSD",
-        "instrument:ETHUSD",
-        "chat"
-    ])
+    bitmex_stream.subscribe(
+        [
+            "trade:XBTUSD",
+            "instrument:XBTUSD",
+            "trade:ETHUSD",
+            "instrument:ETHUSD",
+            "chat",
+        ]
+    )
 
     while True:
         try:
