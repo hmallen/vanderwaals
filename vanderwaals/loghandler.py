@@ -22,6 +22,8 @@ class LogHandler:
         file=True,
         file_level="DEBUG",
         log_directory="logs/",
+        log_format="%(asctime)s | %(message)s",
+        date_format="%m/%d/%Y %I:%M:%S%p",
     ):
         if not log_directory.endswith("/"):
             log_directory = f"{log_directory}/"
@@ -32,9 +34,7 @@ class LogHandler:
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.DEBUG)
 
-        formatter = logging.Formatter(
-            fmt="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S%p |"
-        )
+        formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
 
         if console:
             stream_handler = logging.StreamHandler()

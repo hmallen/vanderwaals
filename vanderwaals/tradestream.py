@@ -1,51 +1,19 @@
 import datetime
 import json
-import logging
-import logging.handlers
 import os
 import threading
 import traceback
 import time
 
-# from pprint import pprint
+import loghandler
 from pymongo import MongoClient
 import websocket
 
-# logging.basicConfig()
-
 
 class BitmexStream:
-    def __init__(
-        self,
-        mongo_host="localhost",
-        mongo_port=27017,
-        mongo_db="bitmex",
-        logger="bitmex_stream",
-    ):
-        log_file = f"{logger}.log"
-
-        self.logger = logging.getLogger(logger)
-        self.logger.setLevel(logging.DEBUG)
-
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
-        # file_handler = logging.FileHandler()
-        # file_handler.setLevel(logging.DEBUG)
-        rotating_handler = logging.handlers.RotatingFileHandler(
-            log_file, maxBytes=1e7, backupCount=10
-        )
-
-        formatter = logging.Formatter(
-            fmt="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S%p|"
-        )
-
-        stream_handler.setFormatter(formatter)
-        # file_handler.setFormatter(formatter)
-        rotating_handler.setFormatter(formatter)
-
-        self.logger.addHandler(stream_handler)
-        # self.logger.addHandler(file_handler)
-        self.logger.addHandler(rotating_handler)
+    def __init__(self, mongo_host="localhost", mongo_port=27017, mongo_db="bitmex"):
+        log_handler = loghandler.LogHandler()
+        self.logger = log_handler.create_logger("bitmexstream")
 
         self.db = MongoClient(f"mongodb://{mongo_host}:{mongo_port}")[mongo_db]
 

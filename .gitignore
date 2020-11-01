@@ -1,3 +1,4 @@
 env/
 .vscode/
-*/*.log
+logs/
+vanderwaals/__pycache__/
