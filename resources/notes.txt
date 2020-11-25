@@ -1,4 +1,32 @@
+ON-CHAIN:
+- 10/28 (Revealed 10/22)
+- >95% in profit
+- Indicator:
+-- UTXO in profit
+-- longer term cloud
+-- on chain
+
+Short term:
+- "Momentum"
+Medium:
+- ...cloud
+Long:
+- "Discrepancies in on chain"
+- "addresses being used"
+- "capital flow"
+- "when long term hodlers move funds around on blockchain"
+
 bitmexstream.py
+
+Instrument keys (timestamps):
+- closingTimestamp
+- front
+- fundingInterval
+- fundingTimestamp
+- listing
+- openingTimestamp
+- sessionInterval
+(- timestamp)
 
 DEBUG:__main__:Trade Count: 1
 ERROR:websocket:error from callback <bound method BitmexStream.on_error of <__main__.BitmexStream object at 0x7fb035f82040>>: 'BitmexStream' object has no attribute 'exited'

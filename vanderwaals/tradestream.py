@@ -4,24 +4,164 @@ import os
 import threading
 import traceback
 import time
+import sys
 
-import loghandler
 from pymongo import MongoClient
 import websocket
 
+from pprint import pprint
+
+import langdetect
+from google.cloud import translate_v2
+import six
+
+import loghandler
+
+log_handler = loghandler.LogHandler()
+
+from dotenv import load_dotenv, find_dotenv
+
+global_logger = log_handler.create_logger("global")
+
+load_dotenv(find_dotenv())
+
+mongo_client = MongoClient(
+    host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
+)[os.getenv("MONGO_DB")]
+
+
+def format_timestamps(message):
+    if message["table"] == "chat":
+        ts_labels = ["date"]
+
+    elif message["table"] == "instrument":
+        ts_labels = [
+            "closingTimestamp",
+            "front",
+            "fundingInterval",
+            "fundingTimestamp",
+            "listing",
+            "openingTimestamp",
+            "sessionInterval",
+            "timestamp",
+        ]
+
+    elif message["table"] == "trade":
+        ts_labels = ["timestamp"]
+
+    else:
+        global_logger.error(
+            f'Unknown table value in format_timestamps: {message["table"]}'
+        )
+
+        return False
+
+    for idx, single_event in enumerate(message["data"]):
+        for ts in ts_labels:
+            if ts in message["data"][idx]:
+                message["data"][idx][ts] = datetime.datetime.fromisoformat(
+                    single_event[ts].rstrip("Z")
+                )
+            # else:
+            # global_logger.warning(f"Datetime key not found: {ts}")
+
+    return message
+
+
+class ChatHandler:
+    def __init__(self, enable_translation):
+        self.logger = log_handler.create_logger("chathandler")
+
+        if enable_translation is True:
+            self.translate_client = translate_v2.Client(target_language="en")
+        else:
+            self.translate_client = None
+
+    def process_message(self, message, target_language="en", save_mongo=True):
+        message = format_timestamps(message)
+
+        for msg in message["data"]:
+            self.logger.info(f"Chat Message: {msg['user']} => {msg['message']}")
+
+            detected_language = ""
+            msg["translation"] = ""
+            msg["translation_info"] = {}
+
+            if self.translate_client:
+                try:
+                    detected_language = langdetect.detect(msg["message"])
+                    self.logger.debug(f"detected_language: {detected_language}")
+
+                except langdetect.lang_detect_exception.LangDetectException:
+                    self.logger.warning(
+                        "Exception raised by langdetect. Safe to ignore."
+                    )
+
+                except Exception as e:
+                    self.logger.exception(f"Unknown exception in langdetect: {e}")
+
+                if detected_language != "en":
+                    translate_result = self.translate_client.translate(msg["message"])
+
+                    msg["translation"] = translate_result["translatedText"]
+                    msg["translation_info"] = translate_result
+
+                    self.logger.info(
+                        f"Translation: {msg['user']} => {msg['translation']}"
+                    )
+
+            if save_mongo is True:
+                insert_result = mongo_client["chat"].insert_one(message)
+                self.logger.debug(f"Chat ID: {insert_result.inserted_id}")
+
+
+class InstrumentHandler:
+    def __init__(self):
+        self.logger = log_handler.create_logger("instrumenthandler")
+
+    def update_instrument(self, message):
+        message = format_timestamps(message)
+
+        for msg in message["data"]:
+            # Deal with hardcoded exchange name at some point
+            if message["action"] == "partial":
+                msg["_id"] = f'bitmex-{message["filter"]["symbol"]}'
+            elif message["action"] == "update":
+                msg["_id"] = f'bitmex-{msg["symbol"]}'
+            else:
+                self.logger.error(
+                    f'Unknown action in InstrumentHandler.update_instrument: {message["action"]}'
+                )
+
+                return False
+
+            update_result = mongo_client["instrument"].update_one(
+                {"_id": msg["_id"]}, {"$set": msg}, upsert=True
+            )
+
+            self.logger.info(
+                f"Table: {message['table']}, {message['data'][0]['symbol']}"
+            )
+
+        return True
+
 
 class BitmexStream:
-    def __init__(self, mongo_host="localhost", mongo_port=27017, mongo_db="bitmex"):
-        log_handler = loghandler.LogHandler()
+    def __init__(
+        self,
+        enable_translation=bool(int(os.getenv("ENABLE_TRANSLATION"))),
+    ):
         self.logger = log_handler.create_logger("bitmexstream")
 
-        self.db = MongoClient(f"mongodb://{mongo_host}:{mongo_port}")[mongo_db]
+        self.logger.info("Initializing chat handler.")
+        self.chat_handler = ChatHandler(enable_translation=enable_translation)
 
-        self.exited = False
+        self.logger.info("Initializing instrument handler.")
+        self.instrument_handler = InstrumentHandler()
 
     def connect(self):
         """Connect to the websocket in a thread."""
-        self.logger.debug("Starting thread")
+        self.logger.debug("Starting websocket thread.")
 
         self.ws = websocket.WebSocketApp(
             "wss://www.bitmex.com/realtime",
@@ -34,7 +174,7 @@ class BitmexStream:
         self.wst = threading.Thread(target=lambda: self.ws.run_forever())
         self.wst.daemon = True
         self.wst.start()
-        self.logger.debug("Started thread.")
+        self.logger.debug("Started websocket thread.")
 
         # Wait for connect before continuing
         conn_timeout = 5
@@ -47,6 +187,8 @@ class BitmexStream:
             raise websocket.WebSocketTimeoutException(
                 "Couldn't connect to websocket! Exiting."
             )
+
+        self.exited = False
 
     def subscribe(self, channels):
         self.send_command(command="subscribe", args=channels)
@@ -64,44 +206,46 @@ class BitmexStream:
         """Handler for parsing WS messages."""
         message = json.loads(message)
 
-        # pprint(message)
-
-        if message["table"] == "chat":
-            dt_name = "date"
-        else:
-            dt_name = "timestamp"
-
         try:
-            if "data" in message and message["data"]:  # and message["data"]:
-                for idx, single_trade in enumerate(message["data"]):
-                    message["data"][idx][dt_name] = datetime.datetime.fromisoformat(
-                        single_trade[dt_name].rstrip("Z")
-                    )
+            # Market Data Message
+            if "data" in message and message["data"]:
 
-                # insert_result = self.db[message["data"][0]["symbol"]].insert_many(
-                #    message["data"]
-                # )
-                insert_result = self.db[message["table"]].insert_many(message["data"])
-
-                if message["table"] == "trade":
-                    self.logger.debug(
-                        f"Trade Count: {len(insert_result.inserted_ids)}, {message['data'][0]['symbol']} => {message['data'][0]['size']} @ {message['data'][0]['price']}"
+                if message["table"] == "chat":
+                    ch_thread = threading.Thread(
+                        target=self.chat_handler.process_message, args=(message,)
                     )
+                    ch_thread.start()
+
                 elif message["table"] == "instrument":
-                    self.logger.debug(
-                        f"Table: {message['table']}, {message['data'][0]['symbol']}"
+                    dh_thread = threading.Thread(
+                        target=self.instrument_handler.update_instrument,
+                        args=(message,),
                     )
-                elif message["table"] == "chat":
-                    self.logger.debug(
-                        f"Chat Message: {message['data'][0]['user']} => {message['data'][0]['message']}"
+                    dh_thread.start()
+
+                elif message["table"] == "trade":
+                    message = format_timestamps(message)
+
+                    insert_result = mongo_client[message["table"]].insert_many(
+                        message["data"]
                     )
 
-            else:
-                if dt_name in message:
-                    message[dt_name] = datetime.datetime.fromisoformat(
-                        message[dt_name].rstrip("Z")
+                    self.logger.info(
+                        f"Trade Count: {len(insert_result.inserted_ids)}, {message['data'][0]['symbol']} => {message['data'][0]['side'].upper()} {message['data'][0]['size']} @ {message['data'][0]['price']}"
                     )
-                insert_result = self.db["status"].insert_one(message)
+
+                else:
+                    self.logger.error(
+                        f"Unknown table value in BitmexStream.on_message: {message['table']}"
+                    )
+
+            # Status Message
+            else:
+                if "timestamp" in message:
+                    message["timestamp"] = datetime.datetime.fromisoformat(
+                        message["timestamp"].rstrip("Z")
+                    )
+                insert_result = mongo_client["status"].insert_one(message)
                 self.logger.debug(f"Status ID: {insert_result.inserted_id}")
 
         except:
@@ -128,7 +272,18 @@ class BitmexStream:
 
 
 if __name__ == "__main__":
-    bitmex_stream = BitmexStream()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--translate",
+        action="store_true",
+        default=False,
+        help="Enable chat text translation.",
+    )
+    args = parser.parse_args()
+
+    bitmex_stream = BitmexStream(enable_translation=args.translate)
 
     bitmex_stream.connect()
 

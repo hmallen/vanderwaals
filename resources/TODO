@@ -1,4 +1,14 @@
-BTC Dominance
+X--BTC Dominance
 BTC UTXOs in profit
 Stream metrics
 Korean translation for bitmex chat
+X--Instrument data dashboard (Update single dict for each ws update)
+Cryptomoonshots integration
+
+PRICE TEST:
+1) Consume reg price updates from multiple APIs and compare timing
+-- gecko
+-- paprika
+-- ?
+2) Consume transactions from blockchain (geth)
+3) Consume transactions from txpool

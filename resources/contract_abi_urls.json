@@ -1,0 +1,7 @@
+{
+    "factory": 1,
+    "swap": 1,
+    "swap_erc20": 1,
+    "router": 1,
+    "library": 1
+}

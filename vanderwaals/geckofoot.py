@@ -1,6 +1,7 @@
 import datetime
 import itertools
-import logging
+
+# import logging
 import os
 import sys
 import time
@@ -8,13 +9,20 @@ import time
 from pycoingecko import CoinGeckoAPI
 from pymongo import MongoClient
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# logging.basicConfig()
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.DEBUG)
+
+import loghandler
+
+log_handler = loghandler.LogHandler()
+global_logger = log_handler.create_logger("geckofoot-global")
 
 
 class GeckoData:
     def __init__(self):
+        self.logger = log_handler.create_logger("geckodata")
+
         self.cg = CoinGeckoAPI()
 
         db = MongoClient("mongodb://localhost:27017")["vanderwaals-dev"]
@@ -50,7 +58,7 @@ class GeckoData:
         continue_requests = True
         while continue_requests:
             try:
-                logger.debug(f"page: {page}")
+                self.logger.debug(f"page: {page}")
                 cm_page = self.cg.get_coins_markets(
                     vs_currency="usd",
                     per_page="250",
@@ -60,7 +68,7 @@ class GeckoData:
                 )
 
                 if len(cm_page) == 0:
-                    logger.debug("No data on requested page.")
+                    self.logger.debug("No data on requested page.")
                     continue_requests = False
 
                 else:
@@ -83,23 +91,23 @@ class GeckoData:
                                     )
 
                                 inserted_id = self.coll_data.insert_one(cm).inserted_id
-                                logger.debug(f"inserted_id: {inserted_id}")
+                                self.logger.debug(f"inserted_id: {inserted_id}")
 
                             else:
-                                logger.debug(
+                                self.logger.debug(
                                     f'{cm["name"]} below min cap of {min_cap}.'
                                 )
                                 continue_requests = False
 
                         except TypeError:
-                            logger.debug("Invalid volume or market cap data.")
+                            self.logger.debug("Invalid volume or market cap data.")
 
                 page += 1
 
                 time.sleep(1)
 
             except KeyboardInterrupt:
-                logger.info("Exit signal received.")
+                self.logger.info("Exit signal received.")
 
                 break
 
@@ -107,15 +115,15 @@ class GeckoData:
                 request_status = False
 
                 error_count += 1
-                logger.warning(f"Error count: {error_count}")
+                self.logger.warning(f"Error count: {error_count}")
 
-                logger.exception(e)
+                self.logger.exception(e)
 
-                logger.warning("Delaying for 10 seconds.")
+                self.logger.warning("Delaying for 10 seconds.")
 
                 time.sleep(10)
 
-            logger.debug(f"continue_requests: {continue_requests}")
+            self.logger.debug(f"continue_requests: {continue_requests}")
 
         return (request_status, error_count)
 
@@ -127,7 +135,7 @@ if __name__ == "__main__":
 
     while True:
         res, err = gecko.update_coins()
-        logger.debug(f"res: {res}, err: {err}")
+        global_logger.debug(f"res: {res}, err: {err}")
         last_loop = time.time()
 
         try:
@@ -135,9 +143,9 @@ if __name__ == "__main__":
                 time.sleep(1)
 
         except KeyboardInterrupt:
-            logger.info("Exit signal received.")
+            global_logger.info("Exit signal received.")
 
             break
 
         except Exception as e:
-            logger.exception(e)
+            global_logger.exception(e)

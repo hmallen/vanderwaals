@@ -1,0 +1,16 @@
+General Analysis
+- Replicating the "BSI" from Ivan, so there will be monitoring of on-chain metrics, specifically the handful l know he focuses on.
+- I'm pulling trade level data from the major derivatives exchanges and analyzing in real-time to spot large volume or price swings and alert immediately
+- I'm also capturing all of the troll box messages from these exchanges, translating to english if in another language, and processing them it batches with Google cloud platform's machine learning service to calculate general market sentiment of users globally
+- 
+
+ETH Network Analysis
+(I run my own Geth node, so I'm able to gather on-chain and mempool data instantly when it hits the network)
+- Monitoring of Andre Cronje's (and potentially other developers) dev wallet for any contracts he deploys for "testing in production" as he calls it. Every contract he publishes skyrockets in value quickly.
+- Monitoring all transactions made with the Uniswap smart contract to identify coins suddenly receiving a lot of attention and swap volume
+- Real-time gas price calculations with alerts delivered during low gas cost periods for swapping or using ETH network when most cost-efficient
+
+Low-cap Coin Monitoring
+- Real-time monitoring of Coingecko.com (and couple others) for coins trending in search or those with sudden price/volume changes, specifically targeting those with market cap under $10,000,000 and daily trade volume of somewhere in the range of $1,000,000
+-- I think this can become that 10x machine. By having a 24/7 monitor of major aggregators where people go to make their buying decisions, a few hours advantage on any of the many tokens that moon daily can make some big time money off of even small investments
+- Reddit subforum monitoring (initially /r/cryptomoonshots) for trending projects which can be correlated with chain and price/volume data, while scraped messages can also be analyzed for sentiment analysis
