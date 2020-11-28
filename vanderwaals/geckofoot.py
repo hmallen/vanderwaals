@@ -9,10 +9,6 @@ import time
 from pycoingecko import CoinGeckoAPI
 from pymongo import MongoClient
 
-# logging.basicConfig()
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
-
 import loghandler
 
 log_handler = loghandler.LogHandler()

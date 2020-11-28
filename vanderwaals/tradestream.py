@@ -20,10 +20,9 @@ import loghandler
 log_handler = loghandler.LogHandler()
 
 from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
 
 global_logger = log_handler.create_logger("global")
-
-load_dotenv(find_dotenv())
 
 mongo_client = MongoClient(
     host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
