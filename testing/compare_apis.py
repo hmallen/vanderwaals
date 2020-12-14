@@ -6,8 +6,8 @@ import sys
 import time
 
 from pycoingecko import CoinGeckoAPI
-
 from coinpaprika import client as Coinpaprika
+
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -28,7 +28,7 @@ class CoinWrangler:
             os.getenv('MONGO_ATLAS'),
         )[os.getenv['MONGO_DB']]
 
-    def get_gecko_coins(self, min_cap=0):
+    def get_gecko_coins(self, min_cap=0, traded_only=True):
         coins_markets = []
         page = 1
         error_count = 0
@@ -41,7 +41,7 @@ class CoinWrangler:
                     per_page='250',
                     page=str(page),
                     order='volume_desc'
-                )# price_change_percentage='1h,24h,7d,14d,30d')
+                )  # price_change_percentage='1h,24h,7d,14d,30d')
 
                 if len(cm_page) == 0:
                     logger.debug('No data on requested page.')
@@ -55,6 +55,11 @@ class CoinWrangler:
                                 logger.debug(
                                     f'Appended {cm["name"]} [{cm["market_cap"]}] [{cm["total_volume"]}]'
                                 )
+
+                            elif traded_only is True and cm['total_volume'] == 0:
+                                logger.debug(
+                                    f'{cm["name"]} has no trade volume.')
+                                build_list = True
 
                             else:
                                 logger.debug(
@@ -84,14 +89,14 @@ class CoinWrangler:
         return coins_markets
 
     def get_paprika_coins(self):
-        pass
+        return True
 
     def get_cmc_coins(self):
-        pass
+        return True
 
-    def store_data(self, label):
+    def store_data(self, label, data):
         dt_now = datetime.datetime.utcnow()
 
 
 if __name__ == '__main__':
-    db = MongoClient(os.getenv('MONGO_ATLAS'))[os.getenv('MONGO_DB')]
+    db = MongoClient(os.getenv('MONGO_ATLAS'))  # [os.getenv('MONGO_DB')]
