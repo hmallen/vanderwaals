@@ -1,5 +1,6 @@
 .env
 env/
+env.win/
 .vscode/
 logs/
 vanderwaals/__pycache__/
