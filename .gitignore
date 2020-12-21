@@ -4,3 +4,4 @@ env.win/
 .vscode/
 logs/
 vanderwaals/__pycache__/
+vanderwaals/utils/__pycache__/
