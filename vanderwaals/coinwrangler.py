@@ -117,7 +117,7 @@ if __name__ == '__main__':
     from pprint import pprint
 
     cw = CoinWrangler()
-    dn = DataNormalizer()
+    dn = datanormalizer.DataNormalizer()
 
     gecko_coins = cw.get_gecko_coins()
     pprint(gecko_coins)

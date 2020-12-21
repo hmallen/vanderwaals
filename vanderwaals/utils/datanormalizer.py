@@ -63,15 +63,15 @@ class DataNormalizer:
             'market_cap': data['market_cap'],
             'volume': data['total_volume'],
             'ath': data['ath'],
-            'ath_date': datetime.datetime.fromisoformat(data['ath_date'].rstrip('Z')),
+            'ath_date': data['ath_date'],
             'atl': data['atl'],
-            'atl_date': datetime.datetime.fromisoformat(data['atl_date'].rstrip('Z')),
+            'atl_date': data['atl_date'],
             'high_24h': data['high_24h'],
             'low_24h': data['low_24h'],
             'image': data['image'],
             'fully_diluted_valuation': data['fully_diluted_valuation'],
             'roi': data['roi'],
-            'last_updated': datetime.datetime.fromisoformat(data['last_updated'].rstrip('Z')),
+            'last_updated': data['last_updated'],
             'percent_change': {
                 '1h': data['price_change_percentage_1h_in_currency'],
                 '24h': data['price_change_percentage_24h'],
@@ -96,6 +96,13 @@ class DataNormalizer:
             'beta_value': 0.0
         }
 
+        if data['ath_date']:
+            unified_data['ath_date'] = datetime.datetime.fromisoformat(data['ath_date'].rstrip('Z'))
+        if data['atl_date']:
+            unified_data['atl_date'] = datetime.datetime.fromisoformat(data['atl_date'].rstrip('Z'))
+        if data['last_updated']:
+            unified_data['last_updated'] = datetime.datetime.fromisoformat(data['last_updated'].rstrip('Z'))
+
         # if self.return_json is True:
         #    unified_data = json.dumps(unified_data)#, json.loads(json.dumps({})))
 
@@ -113,8 +120,8 @@ class DataNormalizer:
             'market_cap': data['quotes']['USD']['market_cap'],
             'volume': data['quotes']['USD']['volume_24h'],
             'ath': data['quotes']['USD']['ath_price'],
-            'ath_date': datetime.datetime.fromisoformat(data['quotes']['USD']['ath_date'].rstrip('Z')),
-            'last_updated': datetime.datetime.fromisoformat(data['last_updated'].rstrip('Z')),
+            'ath_date': data['quotes']['USD']['ath_date'],
+            'last_updated': data['last_updated'],
             'percent_change': {
                 '15m': data['quotes']['USD']['percent_change_15m'],
                 '30m': data['quotes']['USD']['percent_change_30m'],
@@ -135,7 +142,7 @@ class DataNormalizer:
             'volume_change': {
                 '24h': data['quotes']['USD']['volume_24h_change_24h']
             },
-            'first_data_at': datetime.datetime.fromisoformat(data['first_data_at'].rstrip('Z')),
+            'first_data_at': data['first_data_at'],
             'beta_value': data['beta_value'],
             'atl': 0.0,
             'atl_date': None,
@@ -145,6 +152,13 @@ class DataNormalizer:
             'fully_diluted_valuation': 0.0,
             'roi': 0.0
         }
+
+        if data['quotes']['USD']['ath_date']:
+            unified_data['ath_date'] = datetime.datetime.fromisoformat(data['quotes']['USD']['ath_date'].rstrip('Z'))
+        if data['last_updated']:
+            unified_data['last_updated'] = datetime.datetime.fromisoformat(data['last_updated'].rstrip('Z'))
+        if data['first_data_at']:
+            unified_data['first_data_at'] = datetime.datetime.fromisoformat(data['first_data_at'].rstrip('Z'))
 
         # if self.return_json is True:
         #    unified_data = json.dumps(unified_data)#, json.loads(json.dumps({})))

@@ -40,7 +40,7 @@ if __name__ == '__main__':
             update_last = 0
             while (time.time() - delay_start) < 300:
                 if (time.time() - update_last) >= 30:
-                    print(f'{300 - (time.time() - delay_start)} seconds remaining until coin data update.')
+                    print(f'{int(300 - (time.time() - delay_start))} seconds remaining until coin data update.')
                     update_last = time.time()
                 time.sleep(1)
     
