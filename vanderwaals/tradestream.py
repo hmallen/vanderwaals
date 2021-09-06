@@ -25,8 +25,8 @@ load_dotenv(find_dotenv())
 global_logger = log_handler.create_logger("global")
 
 mongo_client = MongoClient(
-    host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
-)[os.getenv("MONGO_DB")]
+    host=os.getenv("MONGODB_HOST"), port=int(os.getenv("MONGODB_PORT"))
+)[os.getenv("MONGODB_DB")]
 
 
 def format_timestamps(message):

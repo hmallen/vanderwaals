@@ -26,9 +26,9 @@ class CoinWrangler:
 
         self.gecko_client = CoinGeckoAPI()
 
-        self.db = MongoClient(
+        """self.db = MongoClient(
             os.getenv('MONGO_ATLAS'),
-        ).os.getenv['MONGO_DB']
+        ).os.getenv['MONGO_DB']"""
 
         self.return_json = return_json
 

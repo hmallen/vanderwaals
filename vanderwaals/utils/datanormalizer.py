@@ -93,7 +93,8 @@ class DataNormalizer:
                 '24h': 0.0
             },
             'first_data_at': None,
-            'beta_value': 0.0
+            'beta_value': 0.0,
+            'source': 'coingecko'
         }
 
         if data['ath_date']:
@@ -150,7 +151,8 @@ class DataNormalizer:
             'low_24h': 0.0,
             'image': "",
             'fully_diluted_valuation': 0.0,
-            'roi': 0.0
+            'roi': 0.0,
+            'source': 'coinpaprika'
         }
 
         if data['quotes']['USD']['ath_date']:

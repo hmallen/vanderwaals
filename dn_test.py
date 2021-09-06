@@ -14,7 +14,9 @@ if __name__ == '__main__':
     cw = coinwrangler.CoinWrangler()
     dn = datanormalizer.DataNormalizer()
 
-    mongo_coll = MongoClient(os.getenv('MONGO_ATLAS'))['vanderwaals']['apitesting']
+    mongo_client = MongoClient(f"mongodb://{os.getenv('MONGODB_HOST')}:{os.getenv('MONGODB_PORT')}")
+    mongo_db = mongo_client[os.getenv('MONGODB_DB')]
+    mongo_coll = mongo_db['coinwrangler']
     
     recording_active = True
     while recording_active is True:
