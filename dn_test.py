@@ -27,22 +27,30 @@ if __name__ == '__main__':
             for idx, coin in enumerate(gecko_coins):
                 #pprint(dn.unify_gecko(coin))
                 gecko_coins[idx] = dn.unify_gecko(coin)
+                try:
+                    insert_result = mongo_coll.insert_one(gecko_coins[idx])
+                except:
+                    pprint(gecko_coins[idx])
             
-            insert_result = mongo_coll.insert_many(gecko_coins)
-            print(f'Gecko Coins Inserted: {len(insert_result.inserted_ids)}')
+            # insert_result = mongo_coll.insert_many(gecko_coins)
+            # print(f'Gecko Coins Inserted: {len(insert_result.inserted_ids)}')
 
             for idx, coin in enumerate(paprika_coins):
                 #pprint(dn.unify_paprika(coin))
                 paprika_coins[idx] = dn.unify_paprika(coin)
+                try:
+                    insert_result = mongo_coll.insert_one(paprika_coins[idx])
+                except:
+                    pprint(paprika_coins[idx])
             
-            insert_result = mongo_coll.insert_many(paprika_coins)
-            print(f'Paprika Coins Inserted: {len(insert_result.inserted_ids)}')
+            # insert_result = mongo_coll.insert_many(paprika_coins)
+            # print(f'Paprika Coins Inserted: {len(insert_result.inserted_ids)}')
 
             delay_start = time.time()
             update_last = 0
-            while (time.time() - delay_start) < 300:
+            while (time.time() - delay_start) < 1800:
                 if (time.time() - update_last) >= 30:
-                    print(f'{int(300 - (time.time() - delay_start))} seconds remaining until coin data update.')
+                    print(f'{int(600 - (time.time() - delay_start))} seconds remaining until coin data update.')
                     update_last = time.time()
                 time.sleep(1)
     
